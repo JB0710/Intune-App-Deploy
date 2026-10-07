@@ -1,0 +1,214 @@
+# Build an Intune Win32 app package and deploy it to one or more tenants.
+#
+#   build    -> (optional) downloads a new installer version, generates the scripts/docs, builds the .intunewin,
+#               commits the regenerated files, and passes the package to the next jobs as an artifact
+#   deploy   -> per tenant (environment "intune-<tenant>"): uploads the app, supersedes the previous version,
+#               assigns the pilot group
+#   promote  -> per tenant (environment "intune-<tenant>-production", add required reviewers there):
+#               waits for approval, then assigns the production group
+#
+# Setup: see README.md (repository variables, environments and secrets per tenant).
+
+name: Intune app - build and deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'App folder (e.g. Notepad++)'
+        required: true
+        type: string
+      installer_url:
+        description: 'New version: installer download URL (empty = use Source/download.json)'
+        required: false
+        type: string
+      installer_sha256:
+        description: 'New version: SHA256 published by the vendor (strongly recommended with a URL)'
+        required: false
+        type: string
+      tenants:
+        description: 'Tenants - TenantName(s), comma separated, or "all"'
+        required: true
+        default: 'all'
+        type: string
+      pilot_group:
+        description: 'Group to assign on upload (pilot/test) - optional'
+        required: false
+        type: string
+      production_group:
+        description: 'Group to assign after approval (production) - optional'
+        required: false
+        type: string
+      intent:
+        description: 'Assignment intent'
+        type: choice
+        options: [required, available]
+        default: required
+      supersede:
+        description: 'Supersede the previous version in each tenant'
+        type: boolean
+        default: true
+      commit_changes:
+        description: 'Commit regenerated scripts, docs and download.json to the branch'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: intune-app-${{ inputs.app }}
+  cancel-in-progress: false
+
+env:
+  APP: ${{ inputs.app }}
+
+jobs:
+  build:
+    name: Build ${{ inputs.app }}
+    runs-on: ${{ vars.INTUNE_RUNNER || 'windows-latest' }}
+    permissions:
+      contents: write          # only needed for "commit_changes"
+    outputs:
+      tenants: ${{ steps.tenants.outputs.list }}
+      app_name: ${{ steps.build.outputs.app_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the app folder
+        shell: pwsh
+        run: |
+          if ($env:APP -match '[\\/]|\.\.' -or $env:APP -eq 'IntuneAppTemplate') { throw "Pick an app folder name (e.g. Notepad++), not '$env:APP'." }
+          if (-not (Test-Path (Join-Path $env:APP 'New-IntuneApp.ps1'))) { throw "App folder '$env:APP' not found, or it has no New-IntuneApp.ps1." }
+
+      - name: Select tenants
+        id: tenants
+        shell: pwsh
+        env:
+          TENANTS: ${{ inputs.tenants }}
+        run: |
+          $all = @(Get-ChildItem -Filter 'IntuneTenant-*.json' | ForEach-Object { Get-Content $_.FullName -Raw | ConvertFrom-Json } | Where-Object { $_.AutomationClientId })
+          if (-not $all) { throw 'No tenant is set up for automation - run New-IntuneAutomationRegistration.ps1 and commit its IntuneTenant-<name>.json.' }
+          $names = if ($env:TENANTS.Trim() -eq 'all') { @($all.TenantName) } else { @($env:TENANTS -split '[,; ]+' | Where-Object { $_ }) }
+          $unknown = @($names | Where-Object { $_ -notin $all.TenantName })
+          if ($unknown) { throw "Unknown or not automation-enabled tenant(s): $($unknown -join ', '). Available: $($all.TenantName -join ', ')" }
+          "list=$(ConvertTo-Json -InputObject @($names) -Compress)" >> $env:GITHUB_OUTPUT
+          "Tenants: $($names -join ', ')"
+
+      - name: Generate scripts and build the package
+        id: build
+        shell: pwsh
+        working-directory: ${{ inputs.app }}
+        env:
+          INSTALLER_URL: ${{ inputs.installer_url }}
+          INSTALLER_SHA256: ${{ inputs.installer_sha256 }}
+        run: |
+          $p = @{ NoPrompt = $true; SkipUpload = $true }
+          if ($env:INSTALLER_URL)    { $p.InstallerUrl    = $env:INSTALLER_URL }
+          if ($env:INSTALLER_SHA256) { $p.InstallerSha256 = $env:INSTALLER_SHA256 }
+          ./New-IntuneApp.ps1 @p
+          $info = Get-ChildItem Documentation -Filter '*-Intune.json' | Select-Object -First 1 | Get-Content -Raw | ConvertFrom-Json
+          "app_name=$($info.IntuneDisplayName)" >> $env:GITHUB_OUTPUT
+          @(
+            "### Built $($info.IntuneDisplayName)"
+            ''
+            "| Installer | Type | Publisher | Package |"
+            '|---|---|---|---|'
+            "| ``$($info.InstallerFile)`` | $($info.InstallerType) | $($info.Publisher) | ``$($info.PackageFile)`` |"
+            ''
+          ) | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Commit regenerated files
+        if: ${{ inputs.commit_changes }}
+        shell: pwsh
+        env:
+          APP_NAME: ${{ steps.build.outputs.app_name }}
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- "$env:APP/Scripts" "$env:APP/Documentation" "$env:APP/Source"     # installers are excluded by .gitignore
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { 'Nothing changed.'; exit 0 }
+          git commit -m "Intune: $env:APP - $env:APP_NAME (run $env:GITHUB_RUN_NUMBER)"
+          git push
+
+      - name: Keep the package for the deploy jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: intune-package-${{ github.run_id }}
+          path: |
+            ${{ inputs.app }}/Output/*.intunewin
+            ${{ inputs.app }}/Scripts/
+            ${{ inputs.app }}/Documentation/
+            ${{ inputs.app }}/Source/*.png
+            ${{ inputs.app }}/Source/*.jpg
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0        # .intunewin is already compressed
+
+  deploy:
+    name: Upload - ${{ matrix.tenant }}
+    needs: build
+    runs-on: ${{ vars.INTUNE_RUNNER || 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        tenant: ${{ fromJSON(needs.build.outputs.tenants) }}
+    environment: intune-${{ matrix.tenant }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: intune-package-${{ github.run_id }}
+          path: ${{ inputs.app }}
+
+      - name: Upload to Intune
+        shell: pwsh
+        working-directory: ${{ inputs.app }}
+        env:
+          TENANT: ${{ matrix.tenant }}
+          PILOT_GROUP: ${{ inputs.pilot_group }}
+          INTENT: ${{ inputs.intent }}
+          SUPERSEDE: ${{ inputs.supersede }}
+          INTUNE_CERT_PFX_BASE64: ${{ secrets.INTUNE_CERT_PFX_BASE64 }}
+          INTUNE_CERT_PASSWORD: ${{ secrets.INTUNE_CERT_PASSWORD }}
+          INTUNE_CLIENT_SECRET: ${{ secrets.INTUNE_CLIENT_SECRET }}
+        run: |
+          "| Tenant | App | Result | Intune |`n|---|---|---|---|" | Add-Content $env:GITHUB_STEP_SUMMARY
+          $p = @{ UploadOnly = $true; NoPrompt = $true; Tenant = $env:TENANT; Intent = $env:INTENT }
+          if ($env:SUPERSEDE -eq 'true') { $p.Supersede = $true } else { $p.NoSupersede = $true }
+          if ($env:PILOT_GROUP) { $p.GroupName = $env:PILOT_GROUP }
+          ./New-IntuneApp.ps1 @p
+
+  promote:
+    name: Production - ${{ matrix.tenant }}
+    needs: [build, deploy]
+    if: ${{ inputs.production_group != '' }}
+    runs-on: ${{ vars.INTUNE_RUNNER || 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        tenant: ${{ fromJSON(needs.build.outputs.tenants) }}
+    environment: intune-${{ matrix.tenant }}-production     # add required reviewers to this environment
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: intune-package-${{ github.run_id }}
+          path: ${{ inputs.app }}
+
+      - name: Assign the production group
+        shell: pwsh
+        working-directory: ${{ inputs.app }}
+        env:
+          TENANT: ${{ matrix.tenant }}
+          PRODUCTION_GROUP: ${{ inputs.production_group }}
+          INTENT: ${{ inputs.intent }}
+          INTUNE_CERT_PFX_BASE64: ${{ secrets.INTUNE_CERT_PFX_BASE64 }}
+          INTUNE_CERT_PASSWORD: ${{ secrets.INTUNE_CERT_PASSWORD }}
+          INTUNE_CLIENT_SECRET: ${{ secrets.INTUNE_CLIENT_SECRET }}
+        run: |
+          "| Tenant | App | Result | Intune |`n|---|---|---|---|" | Add-Content $env:GITHUB_STEP_SUMMARY
+          ./New-IntuneApp.ps1 -AssignOnly -NoPrompt -Tenant $env:TENANT -GroupName $env:PRODUCTION_GROUP -Intent $env:INTENT
