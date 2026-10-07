@@ -18,3 +18,10 @@ IntuneAutomationCredentials/
 
 # Local upload logs (CI writes results to the job summary instead)
 */Documentation/*-IntuneUploads.log
+
+# Self-hosted runner - install it OUTSIDE the repository (it holds the runner's credentials)
+actions-runner/
+_work/
+
+# Temporary copy of the updated workflows
+github-workflows-fixed/
