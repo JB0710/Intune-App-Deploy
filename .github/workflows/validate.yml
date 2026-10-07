@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Parse PowerShell scripts and templates
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         run: |
           $bad = 0
           Get-ChildItem -Recurse -File -Include *.ps1, *.ps1.template | ForEach-Object {
@@ -36,7 +36,7 @@ jobs:
           if ($bad) { throw "$bad file(s) have syntax errors." } else { 'All scripts parse.' }
 
       - name: Check download.json files
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         run: |
           $bad = 0
           Get-ChildItem -Recurse -File -Filter download.json | ForEach-Object {
@@ -48,7 +48,7 @@ jobs:
           if ($bad) { throw "$bad problem(s) in download.json files." } else { 'download.json files OK.' }
 
       - name: Check tenant files
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         run: |
           $bad = 0
           Get-ChildItem -File -Filter 'IntuneTenant-*.json' | ForEach-Object {
