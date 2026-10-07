@@ -76,14 +76,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check the app folder
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         run: |
           if ($env:APP -match '[\\/]|\.\.' -or $env:APP -eq 'IntuneAppTemplate') { throw "Pick an app folder name (e.g. Notepad++), not '$env:APP'." }
           if (-not (Test-Path (Join-Path $env:APP 'New-IntuneApp.ps1'))) { throw "App folder '$env:APP' not found, or it has no New-IntuneApp.ps1." }
 
       - name: Select tenants
         id: tenants
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         env:
           TENANTS: ${{ inputs.tenants }}
         run: |
@@ -97,7 +97,7 @@ jobs:
 
       - name: Generate scripts and build the package
         id: build
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         working-directory: ${{ inputs.app }}
         env:
           INSTALLER_URL: ${{ inputs.installer_url }}
@@ -120,7 +120,7 @@ jobs:
 
       - name: Commit regenerated files
         if: ${{ inputs.commit_changes }}
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         env:
           APP_NAME: ${{ steps.build.outputs.app_name }}
         run: |
@@ -164,7 +164,7 @@ jobs:
           path: ${{ inputs.app }}
 
       - name: Upload to Intune
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         working-directory: ${{ inputs.app }}
         env:
           TENANT: ${{ matrix.tenant }}
@@ -200,7 +200,7 @@ jobs:
           path: ${{ inputs.app }}
 
       - name: Assign the production group
-        shell: pwsh
+        shell: pwsh -NoProfile -NonInteractive -Command ". '{0}'"   # no user profile on the runner
         working-directory: ${{ inputs.app }}
         env:
           TENANT: ${{ matrix.tenant }}
