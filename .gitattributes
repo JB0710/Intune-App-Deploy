@@ -1,0 +1,8 @@
+# Keep Windows line endings for PowerShell (scripts are also run by Windows PowerShell 5.1)
+*.ps1       text eol=crlf
+*.template  text eol=crlf
+*.json      text
+*.md        text
+*.yml       text eol=lf
+*.exe       binary
+*.png       binary

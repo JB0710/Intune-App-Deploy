@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 2,
+  "agentName": "MINI-BEAST",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus15.actions.githubusercontent.com/JanisCmcR9nYV4Qe0q9rku5jyBOCWIavVS3Ex3UkohBhZ6cNPL/",
+  "gitHubUrl": "https://github.com/JB0710/Intune-App-Deploy",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}

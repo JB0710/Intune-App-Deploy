@@ -1,0 +1,60 @@
+# Checks every pull request / push that touches the scripts or app folders:
+#   - all PowerShell scripts and templates parse without errors
+#   - every Source/download.json has Url, FileName and a 64-character Sha256
+#   - every IntuneTenant-*.json has TenantName and TenantId, and contains no secrets
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - '**.ps1'
+      - '**.template'
+      - '**/download.json'
+      - 'IntuneTenant-*.json'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ${{ vars.INTUNE_RUNNER || 'windows-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse PowerShell scripts and templates
+        shell: pwsh
+        run: |
+          $bad = 0
+          Get-ChildItem -Recurse -File -Include *.ps1, *.ps1.template | ForEach-Object {
+              $errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errors)
+              if ($errors) { $bad++; "::error file=$($_.FullName)::$($errors[0].Message) (line $($errors[0].Extent.StartLineNumber))" }
+          }
+          if ($bad) { throw "$bad file(s) have syntax errors." } else { 'All scripts parse.' }
+
+      - name: Check download.json files
+        shell: pwsh
+        run: |
+          $bad = 0
+          Get-ChildItem -Recurse -File -Filter download.json | ForEach-Object {
+              try { $d = Get-Content $_.FullName -Raw | ConvertFrom-Json } catch { $bad++; "::error file=$($_.FullName)::Not valid JSON"; return }
+              if (-not $d.Url -or $d.Url -notmatch '^https://') { $bad++; "::error file=$($_.FullName)::Url missing or not https" }
+              if ($d.FileName -notmatch '\.(exe|msi)$')       { $bad++; "::error file=$($_.FullName)::FileName must end in .exe or .msi" }
+              if ($d.Sha256 -notmatch '^[0-9A-Fa-f]{64}$')    { $bad++; "::error file=$($_.FullName)::Sha256 missing or not 64 hex characters" }
+          }
+          if ($bad) { throw "$bad problem(s) in download.json files." } else { 'download.json files OK.' }
+
+      - name: Check tenant files
+        shell: pwsh
+        run: |
+          $bad = 0
+          Get-ChildItem -File -Filter 'IntuneTenant-*.json' | ForEach-Object {
+              $raw = Get-Content $_.FullName -Raw
+              $j = $raw | ConvertFrom-Json
+              if (-not $j.TenantName -or -not $j.TenantId) { $bad++; "::error file=$($_.Name)::TenantName and TenantId are required" }
+              if ($raw -match '(?i)"[^"]*(secret|password|pfx)[^"]*"\s*:' -or $raw -match 'PRIVATE KEY') { $bad++; "::error file=$($_.Name)::Looks like it contains a credential - tenant files must only hold IDs" }
+          }
+          if ($bad) { throw "$bad problem(s) in tenant files." } else { 'Tenant files OK.' }

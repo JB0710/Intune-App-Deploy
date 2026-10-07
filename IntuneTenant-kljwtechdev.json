@@ -1,0 +1,18 @@
+{
+  "TenantName": "kljwtechdev",
+  "TenantDisplayName": "KLJWTech LLC.",
+  "TenantDomain": "kljwtechdev.onmicrosoft.com",
+  "TenantId": "cfed95d4-71df-4b81-950c-8d1bcb0a82c6",
+  "ClientId": "05e73777-dbc1-4707-9f1d-4714b9a5959e",
+  "AppRegistration": "Intune App Upload",
+  "Updated": "2026-10-07 16:57",
+  "AutomationClientId": "59798855-03c8-49e3-b71d-2f9ee06278bb",
+  "AutomationAppRegistration": "Intune App Upload (Automation)",
+  "AutomationCredential": "Certificate",
+  "AutomationCredentialExpires": "2027-10-07",
+  "AutomationCertThumbprint": "32D554EC786B6E86A910A65D8B438BE8FC497148",
+  "GitHubEnvironments": [
+    "intune-kljwtechdev",
+    "intune-kljwtechdev-production"
+  ]
+}

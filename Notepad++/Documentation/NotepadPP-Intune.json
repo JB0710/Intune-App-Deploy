@@ -1,0 +1,18 @@
+{
+  "AppName": "NotepadPP",
+  "IntuneDisplayName": "Notepad++ 8.9.8",
+  "ProductName": "Notepad++",
+  "Publisher": "Don HO",
+  "Version": "8.9.8",
+  "Description": "Notepad++ : a free (GNU) source code editor. Installed silently by Install-NotepadPP.ps1.",
+  "InstallerFile": "npp.8.9.8.Installer.x64.exe",
+  "InstallerType": "NSIS",
+  "ProductCode": "",
+  "Architecture": "x64",
+  "PackageFile": "Output\\npp.8.9.8.Installer.x64.intunewin",
+  "DetectScript": "Scripts\\Detect-NotepadPP.ps1",
+  "InstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Install-NotepadPP.ps1",
+  "UninstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Uninstall-NotepadPP.ps1",
+  "DisplayNameRule": "Notepad++*",
+  "Generated": "2026-10-07 13:41"
+}

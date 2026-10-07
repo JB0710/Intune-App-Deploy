@@ -1,0 +1,20 @@
+# Installers are downloaded from Source/download.json - never commit them (GitHub rejects files over 100 MB)
+*/Source/*.exe
+*/Source/*.msi
+*/Source/*.msp
+*/Source/*.zip
+
+# Build output
+*/Output/*
+!*/Output/.gitkeep
+
+# Credentials - never commit
+*.pfx
+*.p12
+*.cer
+*.key
+INTUNE_*.txt
+IntuneAutomationCredentials/
+
+# Local upload logs (CI writes results to the job summary instead)
+*/Documentation/*-IntuneUploads.log

@@ -1,0 +1,18 @@
+{
+  "AppName": "VSCode",
+  "IntuneDisplayName": "Visual Studio Code 1.141.0",
+  "ProductName": "Visual Studio Code",
+  "Publisher": "Microsoft Corporation",
+  "Version": "1.141.0",
+  "Description": "Visual Studio Code 1.141.0 - installed silently by Install-VSCode.ps1.",
+  "InstallerFile": "VSCodeSetup-x64-1.141.0.exe",
+  "InstallerType": "Inno Setup",
+  "ProductCode": "",
+  "Architecture": "x64",
+  "PackageFile": "Output\\VSCodeSetup-x64-1.141.0.intunewin",
+  "DetectScript": "Scripts\\Detect-VSCode.ps1",
+  "InstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Install-VSCode.ps1",
+  "UninstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Uninstall-VSCode.ps1",
+  "DisplayNameRule": "Microsoft Visual Studio Code",
+  "Generated": "2026-10-07 14:31"
+}

@@ -1,0 +1,18 @@
+{
+  "AppName": "PowerShell7",
+  "IntuneDisplayName": "PowerShell 7-x64 7.6.6.0",
+  "ProductName": "PowerShell 7-x64",
+  "Publisher": "Microsoft Corporation",
+  "Version": "7.6.6.0",
+  "Description": "PowerShell 7-x64 7.6.6.0 - installed silently by Install-PowerShell7.ps1.",
+  "InstallerFile": "PowerShell-7.6.6-win-x64.msi",
+  "InstallerType": "MSI",
+  "ProductCode": "{B1A9B37E-00B6-4BFD-A439-3120FE4F766E}",
+  "Architecture": "x64",
+  "PackageFile": "Output\\PowerShell-7.6.6-win-x64.intunewin",
+  "DetectScript": "Scripts\\Detect-PowerShell7.ps1",
+  "InstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Install-PowerShell7.ps1",
+  "UninstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Uninstall-PowerShell7.ps1",
+  "DisplayNameRule": "PowerShell 7-x64",
+  "Generated": "2026-10-07 19:21"
+}

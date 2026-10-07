@@ -1,0 +1,18 @@
+{
+  "AppName": "Obsidian",
+  "IntuneDisplayName": "Obsidian 1.14.4",
+  "ProductName": "Obsidian",
+  "Publisher": "Obsidian",
+  "Version": "1.14.4",
+  "Description": "Obsidian",
+  "InstallerFile": "Obsidian-1.14.4.exe",
+  "InstallerType": "NSIS",
+  "ProductCode": "",
+  "Architecture": "x64x86",
+  "PackageFile": "Output\\Obsidian-1.14.4.intunewin",
+  "DetectScript": "Scripts\\Detect-Obsidian.ps1",
+  "InstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Install-Obsidian.ps1",
+  "UninstallCommand": "powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File .\\Uninstall-Obsidian.ps1",
+  "DisplayNameRule": "*Obsidian*",
+  "Generated": "2026-10-07 14:31"
+}
